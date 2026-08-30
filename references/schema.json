@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HighLowAnalysisIR",
+  "description": "高低点分析的稳定中间表示（IR）：计算层只产出本 schema 结构，不包含任何展示偏好。所有下游（汇报/可视化/断言）只认这份契约。config_used 不属于 IR，已移出。",
+  "type": "object",
+  "required": ["bar_count", "first_date", "last_date", "last_close", "pivots", "max_drawdown", "distance_to_two_year_low", "moving_averages", "flags"],
+  "properties": {
+    "bar_count": { "type": ["integer", "null"], "description": "K 线根数" },
+    "first_date": { "type": ["string", "null"], "description": "首根日期 YYYY-MM-DD", "examples": ["2024-08-01"] },
+    "last_date": { "type": ["string", "null"], "description": "末根日期 YYYY-MM-DD" },
+    "last_close": { "type": ["number", "null"], "description": "最新收盘价" },
+    "pivots": {
+      "type": "array",
+      "description": "极值点列表（按日期升序），空数组表示无有效极值",
+      "items": {
+        "type": "object",
+        "required": ["date", "type", "price"],
+        "properties": {
+          "date": { "type": "string", "description": "极值点日期" },
+          "type": { "type": "string", "enum": ["high", "low"] },
+          "price": { "type": "number" }
+        }
+      }
+    },
+    "max_drawdown": {
+      "type": "object",
+      "description": "最大回撤。空数据时为 null 字段 + drawdown_pct=0.0",
+      "required": ["from_peak", "from_peak_date", "trough_price", "trough_date", "drawdown_pct"],
+      "properties": {
+        "from_peak": { "type": ["number", "null"], "description": "产生最大回撤时的峰值" },
+        "from_peak_date": { "type": ["string", "null"] },
+        "trough_price": { "type": ["number", "null"] },
+        "trough_date": { "type": ["string", "null"] },
+        "drawdown_pct": { "type": "number", "description": "最大回撤百分比，单位 %" }
+      }
+    },
+    "distance_to_two_year_low": {
+      "type": "object",
+      "required": ["two_year_low", "two_year_low_date", "current_price", "pct_above_low", "price_gap", "distance_mode"],
+      "properties": {
+        "two_year_low": { "type": ["number", "null"] },
+        "two_year_low_date": { "type": ["string", "null"] },
+        "current_price": { "type": ["number", "null"], "description": "现价（末根收盘）" },
+        "pct_above_low": { "type": "number", "description": "现价相对最低点的溢价百分比" },
+        "price_gap": { "type": ["number", "null"], "description": "绝对价差（distance_mode=point 时使用）" },
+        "distance_mode": { "type": "string", "enum": ["pct", "point"] }
+      }
+    },
+    "moving_averages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["window", "ma_value", "pct_offset", "above"],
+        "properties": {
+          "window": { "type": "integer" },
+          "ma_value": { "type": ["number", "null"] },
+          "pct_offset": { "type": ["number", "null"] },
+          "above": { "type": ["boolean", "null"], "description": "现价站上该均线与否；均线不可算时为 null" }
+        }
+      }
+    },
+    "flags": {
+      "type": "object",
+      "required": ["high_drawdown", "at_two_year_low"],
+      "properties": {
+        "high_drawdown": { "type": ["boolean", "null"], "description": "阈值未配置时为 null，配置后为 true/false" },
+        "at_two_year_low": { "type": ["boolean", "null"] }
+      }
+    }
+  }
+}

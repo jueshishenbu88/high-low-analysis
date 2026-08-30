@@ -23,24 +23,39 @@ if str(_ROOT) not in sys.path:
 from scripts.analyze import analyze  # noqa: E402
 
 
+def _render(ir, cfg):
+    """按口径选择渲染器：output_format=summary 走文本摘要，否则走 JSON 记录。"""
+    if cfg.get("output_format") == "summary":
+        from scripts.render_utils import render_summary
+        return render_summary(ir)
+    from scripts.render_utils import render_record
+    return render_record(ir)
+
+
 def load_json(path: Path):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
 def _get(result, dotted: str):
-    """按 a.b.c 路径取值；支持列表索引(n)与dict键；path='__str__' 返回字符串形式。"""
+    """按 a.b.c 路径取值；支持列表索引(n)与dict键；path='__str__' 返回字符串形式。
+
+    返回 (found, value)：found=False 表示路径中任一环节缺失（供 does_not_exist 断言）。
+    """
     if dotted == "__str__":
-        return result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
+        return True, (result if isinstance(result, str) else json.dumps(result, ensure_ascii=False))
     node = result
     for part in dotted.split("."):
         if isinstance(node, list) and part.isdigit():
             node = node[int(part)]
-        elif isinstance(node, dict):
-            node = node.get(part)
+            continue
+        if isinstance(node, dict):
+            if part not in node:
+                return False, None
+            node = node[part]
         else:
-            return None
-    return node
+            return False, None
+    return True, node
 
 
 def run_case(case: dict, tests_dir: Path, base_config: dict):
@@ -52,33 +67,35 @@ def run_case(case: dict, tests_dir: Path, base_config: dict):
     rows = load_json(data_path)
     # 用例级配置覆盖：case['config'] 中的字段覆盖全局 config（对应"配置化验证"）
     cfg = {**base_config, **(case.get("config") or {})}
-    result = analyze(rows, cfg)
+    result = _render(analyze(rows, cfg), cfg)
 
     failures = []
     for ass in case.get("asserts", []):
         path = ass["path"]
         op = ass["op"]
-        expect = ass["expect"]
-        actual = _get(result, path)
+        expect = ass.get("expect")  # exists/does_not_exist 等无值断言可省 expect
+        found, actual = _get(result, path)
         ok = False
         if op == "eq":
-            ok = actual == expect
+            ok = found and actual == expect
         elif op == "approx":
-            ok = isinstance(actual, (int, float)) and abs(actual - expect) < 1e-9
+            ok = found and isinstance(actual, (int, float)) and abs(actual - expect) < 1e-9
         elif op == "gt":
-            ok = actual is not None and actual > expect
+            ok = found and actual is not None and actual > expect
         elif op == "lt":
-            ok = actual is not None and actual < expect
+            ok = found and actual is not None and actual < expect
         elif op == "exists":
-            ok = actual is not None
+            ok = found
+        elif op == "does_not_exist":
+            ok = not found
         elif op == "contains":
-            ok = isinstance(actual, str) and expect in actual
+            ok = found and isinstance(actual, str) and expect in actual
         else:
             ok = False
             failures.append(f"  未支持的断言 op: {op}")
         if not ok:
             failures.append(
-                f"  [{ass['path']}] 期望 {op} {expect}，实际 {actual}"
+                f"  [{path}] 期望 {op} {expect}，实际 {actual}"
             )
     return name, "PASS" if not failures else "FAIL", "\n".join(failures)
 

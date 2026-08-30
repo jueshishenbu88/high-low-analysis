@@ -66,3 +66,9 @@
     - { path: "__str__", op: contains, expect: "峰值" }
     - { path: "__str__", op: contains, expect: "MA5" }
     - { path: "__str__", op: contains, expect: "最新收盘" }
+
+- name: IR分层-结果不含config_used(回归守卫)
+  data_file: data/sample_uptrend_drawdown.json
+  asserts:
+    - { path: "config_used", op: does_not_exist }
+    - { path: "bar_count", op: eq, expect: 29 }

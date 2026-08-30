@@ -14,13 +14,30 @@
 high-low-analysis/
 ├── config.yaml          # 可配置项（默认值即能跑）
 ├── scripts/
-│   └── analyze.py       # 确定性计算：pivot 高低点 / max_drawdown / 距两年低点
+│   ├── analyze.py       # 计算层：确定性分析，只产出稳定 IR（pivot / 回撤 / 距低点）
+│   └── render_utils.py  # 渲染层：纯函数，IR → JSON 记录 / 文本摘要
+├── references/
+│   └── schema.json      # IR 结构契约（下游唯一认的格式）
 ├── tests/
 │   ├── cases.yaml       # ← 用户配置的测试用例（喂数据 + 断言）
 │   ├── run_tests.py     # 验证驱动，独立可跑
 │   └── data/            # 用例用 K 线数据（合成/脱敏）
 └── README.md
 ```
+
+## 计算与渲染分离（IR 分层，2026-08-31）
+
+核心是"确定性的分析事实"与"怎么给人看"解耦：
+
+- **计算层** `analyze.py` → 只产出**稳定 IR**（一份不掺展示偏好的分析事实字典），
+  字段以 `references/schema.json` 为准，**不包含任何配置快照**（`config_used` 已移出）。
+- **渲染层** `render_utils.py` → 纯函数，把同一份 IR 按需渲染成不同形态：
+  - `render_record(ir)` → JSON 完整记录（CLI 默认输出）
+  - `render_summary(ir)` → 人类可读文本摘要（`output_format: summary`）
+  - 调用方（脚本 / Agent / 报表 / 测试）任选其一，**无需改动计算层**。
+
+好处：新增一种展示形态（图表、HTML、表格）只需加一个渲染函数；
+下游只依赖 `schema.json` 契约，不依赖配置细节或展示逻辑。
 
 ## 安装与使用
 
@@ -114,7 +131,7 @@ python tests/run_tests.py --cases tests/cases.real.yaml
 git status --short
 git ls-files | grep -E "tests/data/real|cases.real|__pycache__" || echo "OK: 干净"
 
-# 4. 确认发布版用例仍是 5 个、全通过
+# 4. 确认发布版用例仍是 6 个、全通过（含 IR 分层守卫用例）
 python tests/run_tests.py && git add -A && git commit -m "docs: 补充发布后验证流程"
 
 # 5. 推送到远端

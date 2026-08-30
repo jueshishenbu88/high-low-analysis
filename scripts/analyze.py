@@ -220,27 +220,6 @@ def build_flags(mdd: dict, dist: dict, cfg: dict) -> dict:
 # 对外主入口
 # --------------------------------------------------------------------------- #
 
-def summarize(r: dict) -> str:
-    """把结构化结果渲染成人类可读的文本摘要（确定性）。供 output_format=summary。"""
-    lines = []
-    lines.append(f"区间 {r['first_date']} → {r['last_date']}（{r['bar_count']} 根）｜最新收盘 {r['last_close']}")
-    dd = r["max_drawdown"]
-    lines.append(f"最大回撤 {dd['drawdown_pct']}% ｜ 峰值 {dd['from_peak']}({dd['from_peak_date']}) → 谷 {dd['trough_price']}({dd['trough_date']})")
-    di = r["distance_to_two_year_low"]
-    if di.get("distance_mode") == "point":
-        lines.append(f"距区间最低 {di['two_year_low']}({di['two_year_low_date']}) 价差 {di['price_gap']}")
-    else:
-        lines.append(f"距区间最低 {di['two_year_low']}({di['two_year_low_date']}) 溢价 {di['pct_above_low']}%")
-    for ma in r["moving_averages"] or []:
-        pos = "上方" if ma["above"] else "下方"
-        lines.append(f"MA{ma['window']} = {ma['ma_value']}（现价乖离 {ma['pct_offset']}%，位于均线{pos}）")
-    fl = r["flags"]
-    if fl["high_drawdown"] is True:
-        lines.append("⚠ 最大回撤超过告警阈值")
-    if fl["at_two_year_low"] is True:
-        lines.append("⚠ 现价已位于区间最低点附近（低于低位阈值）")
-    return "\n".join(lines)
-
 
 def analyze(rows: list[dict], config: Optional[dict] = None) -> dict:
     """主入口：给定 K 线（dict 列表）与可选配置，返回结构化分析 JSON。
@@ -257,7 +236,9 @@ def analyze(rows: list[dict], config: Optional[dict] = None) -> dict:
     mds = [moving_average(bars, w) for w in cfg["ma_windows"] or []]
     flags = build_flags(mdd, dist, cfg)
 
-    result = {
+    # 只产出稳定 IR（分析事实），不掺配置快照。展示形态由 render_utils 决定，
+    # 调用方按需选择 render_record / render_summary，本函数不再吞渲染。
+    return {
         "bar_count": len(bars),
         "first_date": bars[0].date if bars else None,
         "last_date": bars[-1].date if bars else None,
@@ -267,11 +248,7 @@ def analyze(rows: list[dict], config: Optional[dict] = None) -> dict:
         "distance_to_two_year_low": dist,
         "moving_averages": mds,
         "flags": flags,
-        "config_used": cfg,
     }
-    if cfg.get("output_format") == "summary":
-        return summarize(result)
-    return result
 
 
 # --------------------------------------------------------------------------- #
@@ -287,6 +264,7 @@ def analyze_jsonl(path: str, config: Optional[dict] = None) -> dict:
 
 if __name__ == "__main__":
     import sys
+    from render_utils import render_record, render_summary
     if len(sys.argv) < 2:
         print("用法: python analyze.py <kline.json> [config.json]")
         sys.exit(2)
@@ -296,4 +274,10 @@ if __name__ == "__main__":
             cfg = json.load(f)
     with open(sys.argv[1], "r", encoding="utf-8") as f:
         rows = json.load(f)
-    print(json.dumps(analyze(rows, cfg), ensure_ascii=False, indent=2))
+    ir = analyze(rows, cfg)
+    _cfg = {**DEFAULT_CONFIG, **(cfg or {})}
+    # 计算层不再吞渲染：由调用方按 output_format 选择渲染器
+    if _cfg.get("output_format") == "summary":
+        print(render_summary(ir))
+    else:
+        print(json.dumps(render_record(ir), ensure_ascii=False, indent=2))
