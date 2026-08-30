@@ -1,0 +1,25 @@
+# 高低点分析 skill 配置
+# 全部有默认值，删除本文件可恢复 analyze.py 内置默认。可配置项符合"默认即能跑"。
+pivot_window: 5              # 判定极值点时的左右 K 线根数
+min_pivot_gap: 3             # 相邻极值点的最小 K 线间隔
+drawdown_peak_window: 120    # 最大回撤的回溯峰值窗口（K 线根数）
+two_year_days: 480           # "两年"在日线下的近似交易日数
+
+# ── 判断阈值（不配置则输出对应 flags 为 None，不触发告警）──
+drawdown_alert_pct: 45       # 最大回撤超过该 % 则 flags.high_drawdown=true
+low_level_alert_pct: 30      # 现价距区间最低 ≤ 该 % 则 flags.at_two_year_low=true
+ma_windows: [5, 20, 60]      # 计算的均线窗口；空列表则不出均线
+
+# ── 数据口径（analyze 阶段）──
+compare_window_days: null    # 覆盖 two_year_days 的"纵向比较区间"K 线根数；null=用 two_year_days
+distance_mode: pct           # pct=距最低的百分比溢价；point=绝对价差
+output_format: json          # json=结构化输出(默认)；summary=人类可读文本摘要
+
+# ── 拉数阶段（fetch_kline.py，仅影响"拉取"，不重拉不生效）── 复权方式
+# adjust: qfq   # qfq=前复权(默认) / hfq=后复权 / none=不复权
+
+# B 阶段预留：实时行情数据源（当前未实现，占位）
+# datasource:
+#   type: ""                 # 未来: "tushare" | "akshare" | "eastmoney" 等
+#   api_token: ""            # 注意：token 属敏感信息，建议用环境变量而非写死
+#   default_symbol: ""

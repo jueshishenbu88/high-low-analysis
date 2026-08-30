@@ -1,0 +1,15 @@
+# 真实行情数据（用户私有选股名单/行情，不回推 GitHub）
+tests/data/real/
+tests/cases.real.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 本地临时
+.DS_Store
+*.tmp
+/tmp/

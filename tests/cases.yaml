@@ -1,0 +1,68 @@
+# 高低点分析 skill — 测试用例（用户可编辑）
+#
+# 这是「发布版」用例集：仅依赖仓库内自带的合成样例数据，clone 后可开箱即跑。
+# 真实行情数据属用户私有，不回仓库；如需用真实数据验证，请：
+#   1. 运行 scripts/fetch_kline.py 拉取（见 README）
+#   2. 在本文件追加用例，或恢复本地完整的 tests/cases.real.yaml
+#
+# 每个用例：
+#   name:       用例名
+#   data_file:  相对本目录 tests/ 的 K 线 JSON 文件（list[dict]，含 date/open/high/low/close/volume）
+#   config:     可选，口径配置（覆盖 config.yaml），让"验证本身可配置"
+#   asserts:    对 analyze() 输出的断言列表
+#     path:     结果 JSON 的路径，如 max_drawdown.drawdown_pct（支持 list索引 n）
+#     op:       eq | approx | gt | lt | exists | contains
+#     expect:   期望值（approx 为相近值，gt/lt 给阈值，contains 为子串）
+- name: 上升段后回撤的基准用例
+  data_file: data/sample_uptrend_drawdown.json
+  asserts:
+    - { path: "bar_count", op: eq, expect: 29 }
+    - { path: "last_close", op: approx, expect: 9.1 }
+    # 峰值 6/20 高点 13.2，谷底 7/12 低点 9.0 → 回撤 (13.2-9.0)/13.2 ≈ 31.82%（analyze 保留 2 位）
+    - { path: "max_drawdown.drawdown_pct", op: approx, expect: 31.82 }
+    - { path: "max_drawdown.from_peak", op: approx, expect: 13.2 }
+    - { path: "max_drawdown.from_peak_date", op: eq, expect: "2024-06-20" }
+    - { path: "max_drawdown.trough_date", op: eq, expect: "2024-07-12" }
+
+- name: 两年低点位置（当前价高于窗口最低点约 1.11%）
+  data_file: data/sample_uptrend_drawdown.json
+  asserts:
+    - { path: "distance_to_two_year_low.two_year_low", op: approx, expect: 9.0 }
+    - { path: "distance_to_two_year_low.pct_above_low", op: approx, expect: 1.11 }
+    - { path: "distance_to_two_year_low.current_price", op: approx, expect: 9.1 }
+
+# ---------------------------------------------------------------- #
+# 口径能力验证（用合成样例数据 + 用例级 config 驱动，无真实数据依赖，
+# 发布后可回放验证 MA / 阈值告警 / 价差模式 / summary 等新增能力）
+# ---------------------------------------------------------------- #
+- name: 口径-MA均线与阈值flags(样例数据)
+  data_file: data/sample_uptrend_drawdown.json
+  config:
+    ma_windows: [5, 20]
+    drawdown_alert_pct: 40
+    low_level_alert_pct: 50
+  asserts:
+    - { path: "moving_averages.0.window", op: eq, expect: 5 }
+    - { path: "moving_averages.1.window", op: eq, expect: 20 }
+    - { path: "flags.high_drawdown", op: eq, expect: false }
+    - { path: "flags.at_two_year_low", op: eq, expect: true }
+
+- name: 口径-点位价差模式(point)与summary输出(样例数据)
+  data_file: data/sample_uptrend_drawdown.json
+  config:
+    distance_mode: point
+  asserts:
+    - { path: "distance_to_two_year_low.distance_mode", op: eq, expect: "point" }
+    - { path: "distance_to_two_year_low.price_gap", op: approx, expect: 0.1 }
+    - { path: "distance_to_two_year_low.current_price", op: approx, expect: 9.1 }
+
+- name: 口径-summary文本输出(样例数据)
+  data_file: data/sample_uptrend_drawdown.json
+  config:
+    output_format: summary
+    ma_windows: [5]
+  asserts:
+    - { path: "__str__", op: contains, expect: "最大回撤" }
+    - { path: "__str__", op: contains, expect: "峰值" }
+    - { path: "__str__", op: contains, expect: "MA5" }
+    - { path: "__str__", op: contains, expect: "最新收盘" }
