@@ -29,7 +29,7 @@ high-low-analysis/
 ### 方式一：作为 Agent Skill 一键安装（需要 Node.js ≥ 18）
 任何有 Node 环境的机器（无需本仓库克隆）即可安装：
 ```bash
-npx skills add 你的用户名/high-low-analysis
+npx skills add jueshishenbu88/high-low-analysis
 ```
 安装后，在支持 Agent Skills 的运行时（如 Claude Code / Cursor）中，即可通过对话直接调用
 "高低点分析"能力（Agent 会自动编排 `analyze.py`）。
@@ -39,7 +39,7 @@ npx skills add 你的用户名/high-low-analysis
 
 ### 方式二：本地直接运行（无 Node / 无需联网）
 ```bash
-git clone https://github.com/你的用户名/high-low-analysis.git
+git clone https://github.com/jueshishenbu88/high-low-analysis.git
 cd high-low-analysis
 pip install pyyaml          # 仅首次
 python scripts/analyze.py tests/data/sample_uptrend_drawdown.json
@@ -124,7 +124,7 @@ git push
 **发布后自测"别人能否一键安装"（在没有本仓库的临时目录）：**
 ```bash
 mkdir -p /tmp/skills_verify && cd /tmp/skills_verify
-npx skills add 你的用户名/high-low-analysis
+npx skills add jueshishenbu88/high-low-analysis
 # 若能拉取成功，说明发布生效；再用一个真实代码片段触发一次，确认分析可用
 ```
 
