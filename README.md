@@ -1,4 +1,6 @@
-# 高低点分析 skill（自用）
+# 高低点分析 skill
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 对一段日线 K 线做确定性分析：识别极值点（pivot 高/低）、计算最大回撤、
 距"两年内最低点"的当前价位置。**计算全部为确定性纯函数**，可被用例精确断言。

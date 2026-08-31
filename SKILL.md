@@ -1,5 +1,6 @@
 ---
 name: high-low-analysis
+license: MIT
 description: "对一段股票日线 K 线做确定性的高低点与风险分析：识别 pivot 极值高/低点、计算最大回撤、现价距两年内最低点的距离（价差或百分比）、当前价对 MA5/20/60 均线的乖离与站上/跌破，并按阈值输出回撤告警和低位筛选标记。触发场景（中英均可）：当用户要对一段 K 线做高低点分析、判断股票是否处于低位、看最大回撤、看现价离两年最低还有多远、或评估均线位置时调用；关键词 high-low analysis、pivot high/low、max drawdown、distance to two-year low、moving average deviation。计算全部由 scripts/analyze.py 完成（确定性纯函数，产稳定 IR 可被用例精确断言），Agent 只负责喂数据、编排脚本、解释与渲染输出。"
 ---
 
